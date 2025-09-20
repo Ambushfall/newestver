@@ -4,5 +4,5 @@ services:
         # build: ./
         image: docker.io/lukacolic/ytdiscord-pybot:latest
         volumes:
-            - :/usr/src/app/dl
-            - :/usr/src/app/cfg
+            - ./dl:/usr/src/app/dl
+            - ./cfg:/usr/src/app/cfg
