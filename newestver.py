@@ -1,16 +1,18 @@
 import os, sys
-import re
 import time
 import atexit
 from typing import Dict, List, Any
 import logging
 import asyncio
-import requests
-import urllib.parse, urllib.request
 from os import getenv
 import discord
-from discord.ext import commands
+from discord.ext import tasks,commands
 import yt_dlp
+from dotenv import load_dotenv
+import signal
+
+load_dotenv()
+
 
 sys.path.append('.')
 logging.basicConfig(level=logging.WARNING)
@@ -36,12 +38,14 @@ ytdl_format_options: dict[str, Any] = {'format': 'bestaudio',
                                        'overwrites': True,
                                        'age_limit': 100,
                                        'live_from_start': True,
-                                       'paths': {'home': f'./dl/'}
+                                       'paths': {'home': f'./dl/'},
+                                       'cookiefile': './cookies.txt'
+
                                        }
 
 ffmpeg_options = {'options': '-vn -sn'}
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
-
+dlDir = ytdl_format_options['paths']['home']
 
 class Source:
     """Parent class of all music sources"""
@@ -65,11 +69,15 @@ class YTDLSource(Source):
 
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=True):
-        loop = loop or asyncio.get_event_loop()
-        metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
-        if 'entries' in metadata: metadata = metadata['entries'][0]
-        filename = metadata['url'] if stream else ytdl.prepare_filename(metadata)
-        return cls(await discord.FFmpegOpusAudio.from_probe(filename, **ffmpeg_options), metadata)
+        try:
+            loop = loop or asyncio.get_event_loop()
+            metadata = await loop.run_in_executor(None, lambda: ytdl.extract_info(url, download=not stream))
+            if 'entries' in metadata: metadata = metadata['entries'][0]
+            filename = metadata['url'] if stream else ytdl.prepare_filename(metadata)
+            return cls(await discord.FFmpegOpusAudio.from_probe(filename, **ffmpeg_options), metadata)
+        except (PermissionError) as e:
+            print('File already exists')
+        
 
 
 class ServerSession:
@@ -116,9 +124,12 @@ server_sessions: Dict[int, ServerSession] = {}  # {guild_id: ServerSession}
 
 def clean_cache_files():
     if not server_sessions:  # only clean if no servers are connected
-        for file in os.listdir(ytdl_format_options['paths']['home']):
-            if os.path.splitext(file)[1] in ['.webm', '.mp4', '.m4a', '.mp3', '.ogg'] and time.time() - os.path.getatime(file) > 7200:  # remove all cached webm files older than 2 hours
-                os.remove(file)
+        for file in os.listdir(dlDir):
+            if os.path.splitext(file)[1] in ['.webm', '.mp4', '.m4a', '.mp3', '.ogg'] and time.time() - os.path.getatime(os.path.join(dlDir, file)) > 7200:  # remove all cached webm files older than 2 hours
+                # os.remove(file)
+                print(file)
+
+
 
 
 def get_res_path(relative_path):
@@ -140,7 +151,21 @@ def cleanup():
 
 @bot.event
 async def on_ready():
+    auto_cleanup.start()
+    await bot.tree.sync()
     print(f'Logged in as {bot.user}')
+
+
+@tasks.loop(seconds=30)
+async def auto_cleanup():
+    global server_sessions
+    for guild_id,session in server_sessions.copy().items():
+        voice_client = session.voice_client
+        if not voice_client.is_playing():
+            if len(session.queue) == 0:
+                await voice_client.disconnect()
+                voice_client.cleanup()
+                del server_sessions[guild_id]
 
 
 async def connect_to_voice_channel(ctx:commands.Context, channel):
@@ -150,7 +175,7 @@ async def connect_to_voice_channel(ctx:commands.Context, channel):
         await ctx.send(f'Connected to {voice_client.channel.name}.')
         return server_sessions[ctx.guild.id]
     else:
-        await ctx.send(f'Failed to connect to voice channel {ctx.interaction.user.voice.channel.name}.')
+        await ctx.send(f'Failed to connect to voice channel {ctx.author.voice.channel.name}.')
 
 
 @bot.hybrid_command(name='exit')
@@ -247,20 +272,21 @@ async def song(ctx:commands.Context):
 
 @bot.hybrid_command()
 async def play(ctx: commands.Context, query: str):
-    """Play a YouTube video by URL if given a URL, or search up the song and play the first video in search result"""
+    """Search or Play YT"""
+
+    await ctx.defer()
     guild_id = ctx.guild.id
     if guild_id not in server_sessions:  # not connected to any VC
-        if ctx.interaction.user.voice is None:
+        if ctx.author.voice is None:
             await ctx.send(f'You are not connected to any voice channel!')
             return
         else:
-            session = await connect_to_voice_channel(ctx, ctx.interaction.user.voice.channel)
+            session = await connect_to_voice_channel(ctx, ctx.author.voice.channel)
     else:  # is connected to a VC
         session = server_sessions[guild_id]
-        if session.voice_client.channel != ctx.interaction.user.voice.channel:  # connected to a different VC than the command issuer (but within the same server)
-            await session.voice_client.move_to(ctx.interaction.user.voice.channel)
-            await ctx.send(f'Connected to {ctx.interaction.user.voice.channel}.')
-    
+        if session.voice_client.channel != ctx.author.voice.channel:  # connected to a different VC than the command issuer (but within the same server)
+            await session.voice_client.move_to(ctx.author.voice.channel)
+            await ctx.send(f'Connected to {ctx.author.voice.channel}.')
     url = query
     await session.add_to_queue(ctx, url)  # will download file here
     if not session.voice_client.is_playing() and len(session.queue) <= 1:
@@ -272,12 +298,10 @@ async def play(ctx: commands.Context, query: str):
 async def main():
     async with bot:
         await bot.start(getenv('BOT_TOKEN'))
-        
-    
 
 try:
     asyncio.run(main())
 except (Exception, KeyboardInterrupt) as e:
     cleanup()
-    print('Exited')
-
+    print(e)
+    raise SystemExit(e)
