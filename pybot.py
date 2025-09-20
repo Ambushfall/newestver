@@ -8,10 +8,10 @@ from os import getenv
 import discord
 from discord.ext import tasks,commands
 import yt_dlp
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import signal
 
-load_dotenv()
+# load_dotenv('./cfg/.env')
 
 
 sys.path.append('.')
