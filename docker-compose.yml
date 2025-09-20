@@ -1,7 +1,8 @@
 services:
     app:
         container_name: pybot-app
-        build: ~/pybot/.
+        # build: ./
+        image: docker.io/lukacolic/ytdiscord-pybot:latest
         volumes:
-            - ~/dl/data/pybot/dl:/usr/src/app/dl
-            - ~/dl/data/pybot/cfg:/usr/src/app/cfg
+            - :/usr/src/app/dl
+            - :/usr/src/app/cfg
