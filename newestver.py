@@ -39,7 +39,7 @@ ytdl_format_options: dict[str, Any] = {'format': 'bestaudio',
                                        'age_limit': 100,
                                        'live_from_start': True,
                                        'paths': {'home': f'./dl/'},
-                                       'cookiefile': './cookies.txt'
+                                       'cookiefile': './cfg/cookies.txt'
 
                                        }
 

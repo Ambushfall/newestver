@@ -1,7 +1,9 @@
-dl/*
+dl
+cfg
 ignore/
 __pycache__
 nohup.out
 .env
 newestver
+bot-env
 cookies.txt

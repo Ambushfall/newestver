@@ -7,16 +7,12 @@ WORKDIR /usr/src/app
 
 
 VOLUME [ "/usr/src/app/dl" ]
+VOLUME [ "/usr/src/app/cfg" ]
+
 
 ENV VIRTUAL_ENV="/bot-env"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-ENV BOT_TOKEN=""
-ENV BOT_PREFIX=.
-ENV BOT_COLOR=ff0000
-ENV YTDL_FORMAT=bestaudio
-ENV PRINT_STACK_TRACE=true
-ENV BOT_REPORT_COMMAND_NOT_FOUND=true
-ENV BOT_REPORT_DL_ERROR=true
+
 
 RUN pip install -r requirements
 CMD ["python", "./pybot.py"]
