@@ -14,5 +14,5 @@ ENV VIRTUAL_ENV="/bot-env"
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 
-RUN pip install -r requirements
+RUN pip install -r requirements.txt
 CMD ["python", "./pybot.py"]
