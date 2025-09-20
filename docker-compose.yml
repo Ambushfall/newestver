@@ -4,5 +4,4 @@ services:
         build: ~/pybot/.
         volumes:
             - ~/dl/data/pybot/dl:/usr/src/app/dl
-        env_file:
-        - .env
+            - ~/dl/data/pybot/cfg:/usr/src/app/cfg
