@@ -1,0 +1,6 @@
+services:
+    app:
+        container_name: pybot-app
+        build: ~/pybot/.
+        volumes:
+            - ~/dl/data/pybot/dl:/usr/src/app/dl
