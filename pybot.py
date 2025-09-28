@@ -9,14 +9,14 @@ import discord
 from discord.ext import tasks,commands
 import yt_dlp
 # from dotenv import load_dotenv
-import signal
+# import signal
 
-# load_dotenv('./cfg/.env')
+# load_dotenv('.env')
 
 
 sys.path.append('.')
 logging.basicConfig(level=logging.WARNING)
-yt_dlp.utils.bug_reports_message = lambda: ''  # disable yt_dlp bug report
+# yt_dlp.utils.bug_reports_message = lambda: ''  # disable yt_dlp bug report
 intents = discord.Intents.default()
 # noinspection PyDunderSlots
 intents.message_content = True
@@ -292,7 +292,16 @@ async def play(ctx: commands.Context, query: str):
     if not session.voice_client.is_playing() and len(session.queue) <= 1:
         await session.start_playing(ctx)
 
+@play.error
+async def play_error(ctx:commands.Context, error):
+    # if isinstance(error, commands.bad):
+    await ctx.send(f'type: {get_full_class_name(error)} error: {error}')
 
+def get_full_class_name(obj):
+    module = obj.__class__.__module__
+    if module is None or module == str.__class__.__module__:
+        return obj.__class__.__name__
+    return module + '.' + obj.__class__.__name__
 
 
 async def main():

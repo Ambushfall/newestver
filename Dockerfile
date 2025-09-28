@@ -1,12 +1,6 @@
-FROM python:3.11.2
-
-# Set build arguments for target platform information
-ARG TARGETPLATFORM
-ARG TARGETARCH
-ARG TARGETVARIANT
-
-# Display information about the target platform during the build
-RUN echo "Building for TARGETPLATFORM=${TARGETPLATFORM}, TARGETARCH=${TARGETARCH}, TARGETVARIANT=${TARGETVARIANT}"
+# syntax=docker/dockerfile:1
+FROM python:3.11.2-slim-bullseye AS builder
+RUN --mount=type=cache,target=/root/.cache/pip pip install pyyaml
 
 RUN apt-get -y update && apt-get -y upgrade && apt-get install -y --no-install-recommends ffmpeg
 RUN mkdir /usr/src/app
@@ -23,4 +17,5 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 
 RUN pip install -r requirements.txt
+RUN python -m pip install -U "yt-dlp[default]"
 CMD ["python", "./pybot.py"]

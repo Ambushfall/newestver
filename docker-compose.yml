@@ -1,8 +1,18 @@
 services:
     app:
         container_name: pybot-app
-        # build: ./
-        image: docker.io/lukacolic/ytdiscord-pybot:latest
+        build: 
+            context: .
+        # image: docker.io/lukacolic/ytdiscord-pybot:latest
         volumes:
             - ./dl:/usr/src/app/dl
             - ./cfg:/usr/src/app/cfg
+        env_file:
+            - ./cfg/.env
+        develop: 
+            watch:
+            - path: ./
+              action: rebuild
+            - path: ./
+              target: ./
+              action: sync 
