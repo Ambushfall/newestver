@@ -11,8 +11,7 @@ import yt_dlp
 # from dotenv import load_dotenv
 # import signal
 
-# load_dotenv('.env')
-
+# load_dotenv('./cfg/.env')
 
 sys.path.append('.')
 logging.basicConfig(level=logging.WARNING)
@@ -59,7 +58,6 @@ class Source:
     def __str__(self):
         return f'{self.title}\n{self.url}'
 
-
 class YTDLSource(Source):
     """Subclass of YouTube sources"""
 
@@ -78,8 +76,6 @@ class YTDLSource(Source):
         except (PermissionError) as e:
             print('File already exists')
         
-
-
 class ServerSession:
     def __init__(self, guild_id, voice_client, bot):
         self.guild_id: int = guild_id
@@ -117,10 +113,7 @@ class ServerSession:
             # await ctx.send(f'Now playing: ♪ {self.queue[0].title}\n{self.queue[0].url}')
             await self.voice_client.play(self.queue[0].audio_source, after=lambda e=None: self.sync_playback_error(ctx, e))
 
-
-
 server_sessions: Dict[int, ServerSession] = {}  # {guild_id: ServerSession}
-
 
 def clean_cache_files():
     if not server_sessions:  # only clean if no servers are connected
@@ -128,9 +121,6 @@ def clean_cache_files():
             if os.path.splitext(file)[1] in ['.webm', '.mp4', '.m4a', '.mp3', '.ogg'] and time.time() - os.path.getatime(os.path.join(dlDir, file)) > 7200:  # remove all cached webm files older than 2 hours
                 # os.remove(file)
                 print(file)
-
-
-
 
 def get_res_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller
@@ -140,7 +130,6 @@ def get_res_path(relative_path):
         return os.path.join(base_path, relative_path)
     else:
         raise FileNotFoundError(f'Embedded file {os.path.join(base_path, relative_path)} is not found!')
-
 
 @atexit.register
 def cleanup():
@@ -177,6 +166,22 @@ async def connect_to_voice_channel(ctx:commands.Context, channel):
     else:
         await ctx.send(f'Failed to connect to voice channel {ctx.author.voice.channel.name}.')
 
+
+@bot.hybrid_command(name="join")
+async def connect(ctx:commands.Context):
+    """[DEBUG] Connects to voice channel"""
+    guild_id = ctx.guild.id
+    if guild_id not in server_sessions:  # not connected to any VC
+        if ctx.author.voice is None:
+            await ctx.send(f'You are not connected to any voice channel!')
+            return
+        else:
+            session = await connect_to_voice_channel(ctx, ctx.author.voice.channel)
+    else:  # is connected to a VC
+        session = server_sessions[guild_id]
+        if session.voice_client.channel != ctx.author.voice.channel:  # connected to a different VC than the command issuer (but within the same server)
+            await session.voice_client.move_to(ctx.author.voice.channel)
+            await ctx.send(f'Connected to {ctx.author.voice.channel}.')
 
 @bot.hybrid_command(name='exit')
 async def disconnect(ctx:commands.Context):
