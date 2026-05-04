@@ -21,7 +21,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!',intents=intents, description='')
 
-ytdl_format_options: dict[str, Any] = {'format': 'bestaudio',
+ytdl_format_options: dict[str, Any] = {
                                        'outtmpl': '%(extractor)s-%(id)s-%(title)s.%(ext)s',
                                        'restrictfilenames': True,
                                        'no-playlist': True,
